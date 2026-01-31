@@ -1,0 +1,235 @@
+# Agri-Solve Pro - Project Analysis & Navigation Guide
+
+## Project Overview
+Agri-Solve Pro is a full-stack Progressive Web App (PWA) for agricultural crop diagnostics.
+Built with React + TypeScript + Tailwind CSS + Lovable Cloud backend.
+
+---
+
+## 📁 FILE STRUCTURE & NAVIGATION
+
+### 🎨 DESIGN SYSTEM FILES (For Background & Styling Changes)
+
+**1. src/index.css** (MAIN STYLING FILE)
+   - Line 1-10: Tailwind imports
+   - Line 11-60: Root CSS variables (colors, gradients, shadows)
+     - --background: Main app background (cream color)
+     - --primary: Forest green
+     - --accent: Harvest gold
+     - --forest, --cream, --gold: Custom theme colors
+   - Line 62-95: Field Mode high-contrast theme
+   - Line 97-115: Dark mode variables
+   - Line 117-170: Base styles and typography
+   - Line 172-280: Component classes (.card-premium, .btn-gold, .btn-forest, animations)
+
+**2. tailwind.config.ts** (TAILWIND CONFIGURATION)
+   - Line 7-15: Container settings
+   - Line 16-20: Font family (Outfit)
+   - Line 21-80: Extended colors (all theme colors)
+   - Line 82-100: Border radius settings
+   - Line 102-130: Animations and keyframes
+
+**3. index.html** (HTML HEAD & META)
+   - Line 1-27: Document head with meta tags, fonts, PWA manifest
+   - Theme color, viewport settings
+   - Google Fonts (Outfit) import
+
+---
+
+### 📄 MAIN PAGES
+
+**1. src/pages/Dashboard.tsx** (MAIN APP PAGE)
+   - Line 1-10: Imports
+   - Line 12-99: Dashboard component with grid layout
+   - Components: Header, VoiceButton, WeatherWidget, AIScanner, Marketplace, ScanHistory
+
+**2. src/pages/NotFound.tsx**
+   - 404 error page
+
+---
+
+### 🧩 COMPONENTS
+
+**Header & Navigation:**
+- **src/components/dashboard/Header.tsx**
+  - Line 1-30: Imports and language definitions
+  - Line 32-80: Logo and desktop navigation
+  - Line 82-130: Field mode toggle, language selector
+  - Line 132-180: Mobile menu
+
+**Voice Assistant:**
+- **src/components/dashboard/VoiceButton.tsx**
+  - Line 1-50: Web Speech API types and setup
+  - Line 52-100: Speech recognition logic
+  - Line 102-200: Pulsating button with wave visualization
+
+**Weather Widget:**
+- **src/components/dashboard/WeatherWidget.tsx**
+  - Line 1-20: Types and condition icons
+  - Line 22-70: Weather data simulation
+  - Line 72-160: Weather display with 5-day forecast
+
+**AI Scanner:**
+- **src/components/dashboard/AIScanner.tsx**
+  - Line 1-30: Crop types and imports
+  - Line 32-100: Disease database (diagnosis, causes, cures)
+  - Line 102-180: File upload and image handling
+  - Line 182-280: Analysis logic and results display
+  - Line 282-380: Comparison slider (infected vs healthy)
+
+**Marketplace:**
+- **src/components/dashboard/Marketplace.tsx**
+  - Line 1-40: Imports and types
+  - Line 42-100: Location handling and directions
+  - Line 102-200: Shop listing with details
+
+**Scan History:**
+- **src/components/dashboard/ScanHistory.tsx**
+  - Line 1-120: Previous scan display with expandable details
+
+**Authentication:**
+- **src/components/auth/AuthModal.tsx**
+  - Line 1-130: Sign in/Sign up modal with Lovable Cloud auth
+
+---
+
+### 🔧 STATE & CONTEXT
+
+**src/contexts/AppContext.tsx** (MAIN APP STATE)
+- Line 1-50: Type definitions (Scan, Shop, Profile, Language)
+- Line 52-150: Translations (English, Hindi, Tamil, Telugu)
+- Line 152-280: AppProvider with state management
+- Line 282-350: useApp() and useTranslation() hooks
+- Line 352-380: Geolocation distance calculations
+
+---
+
+### 📦 PUBLIC ASSETS
+
+**public/manifest.json** - PWA manifest
+**public/icons/icon-192.png** - App icon 192px
+**public/icons/icon-512.png** - App icon 512px
+
+---
+
+## 🎯 COMMON MODIFICATIONS
+
+### To Change Background Color:
+1. Open `src/index.css`
+2. Find line ~12: `--background: 45 50% 98%;`
+3. Modify the HSL value
+
+### To Change Primary (Forest Green) Color:
+1. Open `src/index.css`
+2. Find line ~20: `--primary: 109 38% 25%;`
+3. Modify the HSL value
+
+### To Change Accent (Harvest Gold) Color:
+1. Open `src/index.css`
+2. Find line ~35: `--accent: 42 87% 57%;`
+3. Modify the HSL value
+
+### To Add New Language:
+1. Open `src/contexts/AppContext.tsx`
+2. Add to `Language` type (line ~43)
+3. Add translations object (starting around line ~52)
+4. Update language options in `src/components/dashboard/Header.tsx`
+
+### To Modify Crop Disease Database:
+1. Open `src/components/dashboard/AIScanner.tsx`
+2. Find `diseaseDatabase` object (line ~32)
+3. Add or modify crop entries
+
+### To Add New Shop Data:
+1. Use database migration tool or Lovable Cloud UI
+2. Insert into `shops` table
+
+---
+
+## 🗄️ DATABASE SCHEMA
+
+**profiles** table:
+- id (UUID)
+- user_id (UUID, references auth.users)
+- full_name (TEXT)
+- preferred_language (TEXT, default 'en')
+- field_mode_enabled (BOOLEAN, default false)
+
+**scans** table:
+- id (UUID)
+- user_id (UUID, references auth.users)
+- crop_type (TEXT)
+- diagnosis (TEXT)
+- cause (TEXT)
+- organic_cure (TEXT)
+- chemical_cure (TEXT)
+- confidence (DECIMAL)
+- image_url (TEXT)
+- healthy_comparison_url (TEXT)
+
+**shops** table:
+- id (UUID)
+- name (TEXT)
+- address (TEXT)
+- latitude (DECIMAL)
+- longitude (DECIMAL)
+- phone (TEXT)
+- pesticide_stock_list (TEXT[])
+- organic_products (TEXT[])
+- rating (DECIMAL)
+
+---
+
+## 🔐 AUTHENTICATION
+
+- Uses Lovable Cloud (Supabase) authentication
+- Email/password signup and login
+- Auto-creates profile on signup via database trigger
+- RLS policies protect user data
+
+---
+
+## 📱 PWA FEATURES
+
+- Installable on mobile devices
+- Offline-capable (via service worker)
+- Mobile-optimized with 48px touch targets
+- Field Mode for sunlight readability
+
+---
+
+## 🌐 MULTI-LANGUAGE SUPPORT
+
+Languages: English (en), Hindi (hi), Tamil (ta), Telugu (te)
+- Voice recognition adapts to selected language
+- Text-to-speech responses in selected language
+- All UI text translatable via translations object
+
+---
+
+## 📍 KEY FEATURES LOCATION
+
+| Feature | File | Line Range |
+|---------|------|------------|
+| Voice Button | VoiceButton.tsx | 90-180 |
+| Image Upload | AIScanner.tsx | 102-150 |
+| Comparison Slider | AIScanner.tsx | 282-340 |
+| Disease Database | AIScanner.tsx | 32-100 |
+| Shop Finder | Marketplace.tsx | 50-150 |
+| Weather Display | WeatherWidget.tsx | 72-160 |
+| Language Switch | Header.tsx | 82-120 |
+| Field Mode Toggle | Header.tsx | 52-70 |
+| Auth Modal | AuthModal.tsx | 40-130 |
+
+---
+
+## 🚀 DEPLOYMENT
+
+- Frontend: Auto-deployed via Lovable
+- Backend: Lovable Cloud (Supabase)
+- PWA: manifest.json configured for installation
+
+---
+
+Last Updated: 2024
+Version: 1.0.0
