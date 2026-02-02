@@ -139,53 +139,67 @@ export function VoiceButton() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-6">
+    <div className="flex flex-col items-center justify-center py-8 px-6">
       <motion.h3
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-xl font-semibold text-foreground mb-6"
+        className="text-xl font-semibold text-foreground mb-8 text-premium-wide uppercase tracking-wider"
       >
         {t('voiceAssistant')}
       </motion.h3>
 
-      {/* Voice Button */}
-      <div className="relative">
-        {/* Pulse rings */}
+      {/* Glowing Orb Voice Button */}
+      <div className="relative flex items-center justify-center">
+        {/* Outer halo rings */}
+        <div className="absolute w-40 h-40 md:w-52 md:h-52 rounded-full bg-accent/20 halo-pulse" />
+        <div className="absolute w-48 h-48 md:w-60 md:h-60 rounded-full bg-accent/10 halo-pulse" style={{ animationDelay: '0.5s' }} />
+        <div className="absolute w-56 h-56 md:w-72 md:h-72 rounded-full bg-accent/5 halo-pulse" style={{ animationDelay: '1s' }} />
+
+        {/* Pulse rings when listening */}
         <AnimatePresence>
           {isListening && (
             <>
               {[0, 1, 2].map((i) => (
                 <motion.div
                   key={i}
-                  initial={{ scale: 1, opacity: 0.5 }}
-                  animate={{ scale: 2, opacity: 0 }}
+                  initial={{ scale: 1, opacity: 0.6 }}
+                  animate={{ scale: 2.5, opacity: 0 }}
                   transition={{
-                    duration: 1.5,
+                    duration: 2,
                     repeat: Infinity,
-                    delay: i * 0.5,
+                    delay: i * 0.6,
                   }}
-                  className="absolute inset-0 rounded-full bg-accent"
+                  className="absolute w-32 h-32 md:w-40 md:h-40 rounded-full border-2 border-accent"
                 />
               ))}
             </>
           )}
         </AnimatePresence>
 
+        {/* Main Orb Button */}
         <motion.button
-          whileHover={{ scale: 1.05 }}
+          whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
           onClick={toggleListening}
-          className={`relative w-24 h-24 md:w-32 md:h-32 rounded-full flex items-center justify-center transition-all touch-target ${
+          className={`relative w-32 h-32 md:w-40 md:h-40 rounded-full flex items-center justify-center touch-target z-10 ${
             isListening
-              ? 'bg-accent shadow-gold-lg'
-              : 'bg-gradient-gold shadow-gold hover:shadow-gold-lg'
+              ? 'bg-accent orb-glow'
+              : 'bg-gradient-to-br from-accent via-accent to-accent/80 orb-glow'
           }`}
+          style={{
+            background: 'linear-gradient(135deg, hsl(42 87% 62%) 0%, hsl(42 87% 52%) 50%, hsl(42 87% 45%) 100%)',
+          }}
         >
-          {isListening ? (
-            <MicOff className="w-10 h-10 md:w-12 md:h-12 text-accent-foreground" />
-          ) : (
-            <Mic className="w-10 h-10 md:w-12 md:h-12 text-accent-foreground" />
-          )}
+          <motion.div
+            animate={isListening ? { scale: [1, 1.1, 1] } : {}}
+            transition={{ duration: 0.5, repeat: Infinity }}
+          >
+            {isListening ? (
+              <MicOff className="w-12 h-12 md:w-14 md:h-14 text-accent-foreground drop-shadow-lg" />
+            ) : (
+              <Mic className="w-12 h-12 md:w-14 md:h-14 text-accent-foreground drop-shadow-lg" />
+            )}
+          </motion.div>
         </motion.button>
       </div>
 
@@ -196,21 +210,21 @@ export function VoiceButton() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="flex items-center gap-1 mt-6 h-12"
+            className="flex items-center gap-1 mt-8 h-12"
           >
-            {[...Array(12)].map((_, i) => (
+            {[...Array(16)].map((_, i) => (
               <motion.div
                 key={i}
                 animate={{
-                  height: [8, 32, 8],
+                  height: [8, 40, 8],
                 }}
                 transition={{
-                  duration: 0.5,
+                  duration: 0.4,
                   repeat: Infinity,
-                  delay: i * 0.05,
+                  delay: i * 0.04,
                   ease: 'easeInOut',
                 }}
-                className="w-1.5 md:w-2 bg-accent rounded-full"
+                className="w-1.5 md:w-2 bg-accent rounded-full shadow-gold"
               />
             ))}
           </motion.div>
@@ -221,15 +235,15 @@ export function VoiceButton() {
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="mt-4 text-muted-foreground text-center"
+        className="mt-6 text-foreground/80 text-center text-premium font-medium"
       >
         {isListening ? (
           <span className="flex items-center gap-2">
-            <Volume2 className="w-4 h-4 animate-pulse" />
-            {t('listening')}
+            <Volume2 className="w-5 h-5 animate-pulse text-accent" />
+            <span className="text-accent font-semibold">{t('listening')}</span>
           </span>
         ) : (
-          t('tapToSpeak')
+          <span className="text-muted-foreground">{t('tapToSpeak')}</span>
         )}
       </motion.p>
 
@@ -237,18 +251,18 @@ export function VoiceButton() {
       <AnimatePresence>
         {transcript && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="mt-4 p-4 bg-secondary/50 rounded-xl max-w-xs text-center"
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            className="mt-6 p-4 card-glass-dark max-w-sm text-center"
           >
-            <p className="text-foreground text-sm italic">"{transcript}"</p>
+            <p className="text-foreground/90 text-sm italic">"{transcript}"</p>
           </motion.div>
         )}
       </AnimatePresence>
 
       {!isSupported && (
-        <p className="mt-4 text-destructive text-sm text-center">
+        <p className="mt-4 text-destructive text-sm text-center font-medium">
           Speech recognition is not supported in this browser
         </p>
       )}
