@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Camera, X, Loader2, Leaf, AlertTriangle, CheckCircle, Sparkles } from 'lucide-react';
+import { Upload, Camera, X, Loader2, Leaf, AlertTriangle, CheckCircle, Sparkles, ShieldCheck } from 'lucide-react';
 import { useApp, useTranslation } from '@/contexts/AppContext';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const cropTypes = [
   { id: 'rice', emoji: '🌾' },
@@ -15,65 +16,28 @@ const cropTypes = [
   { id: 'other', emoji: '🌱' },
 ];
 
-// Simulated disease database
-const diseaseDatabase: Record<string, { diagnosis: string; cause: string; organic: string; chemical: string; healthyImage: string }> = {
-  rice: {
-    diagnosis: 'Rice Blast (Pyricularia oryzae)',
-    cause: 'Fungal infection caused by high humidity, nitrogen-rich soil, and warm temperatures. Spreads through wind-borne spores.',
-    organic: 'Apply Trichoderma viride (5g/L water). Use neem oil spray (3ml/L). Improve drainage and reduce nitrogen fertilizer. Plant resistant varieties.',
-    chemical: 'Apply Tricyclazole 75% WP (0.6g/L) or Carbendazim 50% WP (1g/L). Spray Propiconazole 25% EC at first signs. Repeat after 10-15 days if needed.',
-    healthyImage: 'https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?w=400',
-  },
-  wheat: {
-    diagnosis: 'Wheat Rust (Puccinia triticina)',
-    cause: 'Fungal disease favored by cool, moist conditions. Orange-brown pustules on leaves reduce photosynthesis and yield.',
-    organic: 'Use bio-fungicides containing Bacillus subtilis. Spray sulfur-based fungicides. Remove infected plant debris. Practice crop rotation.',
-    chemical: 'Apply Propiconazole 25% EC (0.1%) or Tebuconazole 250 EC (0.1%). Early detection is crucial. Spray at tillering and booting stages.',
-    healthyImage: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400',
-  },
-  tomato: {
-    diagnosis: 'Early Blight (Alternaria solani)',
-    cause: 'Fungal infection from soil-borne spores. Thrives in warm, humid conditions. Affects older leaves first, spreading upward.',
-    organic: 'Apply Trichoderma harzianum. Use copper-based organic fungicides. Mulch to prevent soil splash. Ensure proper plant spacing.',
-    chemical: 'Spray Mancozeb 75% WP (2.5g/L) or Chlorothalonil 75% WP (2g/L). Apply preventively every 7-10 days during humid weather.',
-    healthyImage: 'https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=400',
-  },
-  cotton: {
-    diagnosis: 'Cotton Leaf Curl Virus (CLCuV)',
-    cause: 'Viral disease transmitted by whiteflies. Causes upward curling of leaves, stunted growth, and reduced fiber quality.',
-    organic: 'Control whitefly population with neem oil (5ml/L). Use yellow sticky traps. Introduce natural predators like ladybugs. Remove infected plants.',
-    chemical: 'Apply Imidacloprid 17.8% SL (0.3ml/L) for whitefly control. Use Thiamethoxam 25% WG as soil drench. No direct cure for virus.',
-    healthyImage: 'https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=400',
-  },
-  potato: {
-    diagnosis: 'Late Blight (Phytophthora infestans)',
-    cause: 'Destructive fungal-like disease. Thrives in cool, wet conditions. Can destroy entire crop within days if untreated.',
-    organic: 'Apply copper hydroxide fungicide. Use Bordeaux mixture (1%). Remove infected plant parts immediately. Improve air circulation.',
-    chemical: 'Spray Metalaxyl + Mancozeb (0.25%) or Cymoxanil + Mancozeb. Apply preventively during rainy season. Repeat every 5-7 days.',
-    healthyImage: 'https://images.unsplash.com/photo-1518977676601-b53f82ber72a?w=400',
-  },
-  maize: {
-    diagnosis: 'Northern Corn Leaf Blight (Exserohilum turcicum)',
-    cause: 'Fungal infection causing cigar-shaped lesions. Favored by moderate temperatures and high humidity. Reduces grain fill.',
-    organic: 'Apply Trichoderma-based bio-fungicides. Practice crop rotation with non-host crops. Use resistant hybrids. Remove crop residue.',
-    chemical: 'Spray Propiconazole 25% EC (0.1%) or Azoxystrobin 23% SC (1ml/L) at first sign. Two applications 10-14 days apart recommended.',
-    healthyImage: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400',
-  },
-  sugarcane: {
-    diagnosis: 'Red Rot (Colletotrichum falcatum)',
-    cause: 'Major fungal disease affecting stalks. Enters through bore holes and wounds. Causes internal red discoloration and hollow stalks.',
-    organic: 'Use disease-free seed cane. Hot water treatment (50°C for 2 hours). Apply Trichoderma viride to planting material. Avoid waterlogging.',
-    chemical: 'Dip setts in Carbendazim 50% WP (0.1%) for 15 minutes before planting. Apply systemic fungicides to ratoon crops.',
-    healthyImage: 'https://images.unsplash.com/photo-1555012155-1f0b9e29a29c?w=400',
-  },
-  other: {
-    diagnosis: 'General Leaf Spot Disease',
-    cause: 'Various fungal pathogens causing circular or irregular spots. Often triggered by excess moisture and poor air circulation.',
-    organic: 'Remove affected leaves. Improve air circulation. Apply neem oil or sulfur-based fungicides. Avoid overhead watering.',
-    chemical: 'Use broad-spectrum fungicide like Mancozeb 75% WP (2g/L) or Copper Oxychloride 50% WP (3g/L). Consult local extension officer.',
-    healthyImage: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400',
-  },
+// Fallback healthy images for comparison
+const healthyImages: Record<string, string> = {
+  rice: 'https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?w=400',
+  wheat: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400',
+  tomato: 'https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=400',
+  cotton: 'https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=400',
+  potato: 'https://images.unsplash.com/photo-1518977676601-b53f82ber72a?w=400',
+  maize: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400',
+  sugarcane: 'https://images.unsplash.com/photo-1555012155-1f0b9e29a29c?w=400',
+  other: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400',
 };
+
+interface AnalysisResult {
+  diagnosis: string;
+  cause: string;
+  organic: string;
+  chemical: string;
+  confidence: number;
+  healthyImage: string;
+  isHealthy: boolean;
+  preventionTips?: string;
+}
 
 export function AIScanner() {
   const { user, addScan, setCurrentScan } = useApp();
@@ -83,14 +47,7 @@ export function AIScanner() {
   const [selectedCrop, setSelectedCrop] = useState<string>('');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<{
-    diagnosis: string;
-    cause: string;
-    organic: string;
-    chemical: string;
-    confidence: number;
-    healthyImage: string;
-  } | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -135,40 +92,64 @@ export function AIScanner() {
 
     setIsAnalyzing(true);
     
-    // Simulate AI analysis
-    await new Promise(resolve => setTimeout(resolve, 2500));
-
-    const diseaseInfo = diseaseDatabase[selectedCrop] || diseaseDatabase.other;
-    const confidence = 85 + Math.random() * 12;
-
-    const result = {
-      diagnosis: diseaseInfo.diagnosis,
-      cause: diseaseInfo.cause,
-      organic: diseaseInfo.organic,
-      chemical: diseaseInfo.chemical,
-      confidence: Math.round(confidence * 10) / 10,
-      healthyImage: diseaseInfo.healthyImage,
-    };
-
-    setAnalysisResult(result);
-    setIsAnalyzing(false);
-    toast.success('Analysis complete!');
-
-    // Save to database if user is logged in
-    if (user) {
-      const scan = await addScan({
-        crop_type: selectedCrop,
-        diagnosis: result.diagnosis,
-        cause: result.cause,
-        organic_cure: result.organic,
-        chemical_cure: result.chemical,
-        confidence: result.confidence,
-        image_url: uploadedImage,
-        healthy_comparison_url: result.healthyImage,
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-crop', {
+        body: {
+          imageBase64: uploadedImage,
+          cropType: selectedCrop,
+        },
       });
-      if (scan) {
-        setCurrentScan(scan);
+
+      if (error) {
+        console.error('Analysis error:', error);
+        throw new Error(error.message || 'Failed to analyze image');
       }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      const result: AnalysisResult = {
+        diagnosis: data.diagnosis || 'Unknown Condition',
+        cause: data.cause || 'Unable to determine cause',
+        organic: data.organicCure || 'Consult a local agricultural expert',
+        chemical: data.chemicalCure || 'Professional diagnosis recommended',
+        confidence: data.confidence || 75,
+        healthyImage: healthyImages[selectedCrop] || healthyImages.other,
+        isHealthy: data.isHealthy || false,
+        preventionTips: data.preventionTips,
+      };
+
+      setAnalysisResult(result);
+      
+      if (result.isHealthy) {
+        toast.success('Great news! Your plant appears healthy!');
+      } else {
+        toast.success('Analysis complete! Review the diagnosis below.');
+      }
+
+      // Save to database if user is logged in
+      if (user) {
+        const scan = await addScan({
+          crop_type: selectedCrop,
+          diagnosis: result.diagnosis,
+          cause: result.cause,
+          organic_cure: result.organic,
+          chemical_cure: result.chemical,
+          confidence: result.confidence,
+          image_url: uploadedImage,
+          healthy_comparison_url: result.healthyImage,
+        });
+        if (scan) {
+          setCurrentScan(scan);
+        }
+      }
+    } catch (err) {
+      console.error('Analysis failed:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Analysis failed. Please try again.';
+      toast.error(errorMessage);
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -309,6 +290,12 @@ export function AIScanner() {
               </>
             )}
           </motion.button>
+          
+          {isAnalyzing && (
+            <p className="text-center text-sm text-muted-foreground">
+              🌿 AI is analyzing your plant image...
+            </p>
+          )}
         </div>
       )}
 
@@ -321,6 +308,17 @@ export function AIScanner() {
             exit={{ opacity: 0, y: -20 }}
             className="space-y-6"
           >
+            {/* Healthy Plant Notice */}
+            {analysisResult.isHealthy && (
+              <div className="flex items-center gap-3 p-4 bg-primary/10 rounded-xl border border-primary/20">
+                <ShieldCheck className="w-8 h-8 text-primary" />
+                <div>
+                  <p className="font-semibold text-foreground">Plant is Healthy!</p>
+                  <p className="text-sm text-muted-foreground">No diseases detected in your crop.</p>
+                </div>
+              </div>
+            )}
+
             {/* Comparison Slider */}
             <div className="relative">
               <h4 className="text-sm font-medium text-muted-foreground mb-3">Diagnostic Comparison</h4>
@@ -349,7 +347,7 @@ export function AIScanner() {
                 >
                   <img
                     src={uploadedImage || ''}
-                    alt="Infected crop"
+                    alt="Your crop"
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 </div>
@@ -369,10 +367,10 @@ export function AIScanner() {
                 
                 {/* Labels */}
                 <div className="absolute bottom-3 left-3 px-3 py-1.5 bg-destructive/90 text-destructive-foreground text-xs font-medium rounded-full">
-                  {t('infected')}
+                  Your Image
                 </div>
                 <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-primary/90 text-primary-foreground text-xs font-medium rounded-full">
-                  {t('healthy')}
+                  Healthy Reference
                 </div>
               </div>
             </div>
@@ -387,9 +385,17 @@ export function AIScanner() {
             </div>
 
             {/* Diagnosis */}
-            <div className="p-4 bg-destructive/10 rounded-xl border border-destructive/20">
+            <div className={`p-4 rounded-xl border ${
+              analysisResult.isHealthy 
+                ? 'bg-primary/10 border-primary/20' 
+                : 'bg-destructive/10 border-destructive/20'
+            }`}>
               <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="w-5 h-5 text-destructive" />
+                {analysisResult.isHealthy ? (
+                  <ShieldCheck className="w-5 h-5 text-primary" />
+                ) : (
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                )}
                 <h4 className="font-semibold text-foreground">{t('diagnosis')}</h4>
               </div>
               <p className="text-foreground">{analysisResult.diagnosis}</p>
@@ -400,6 +406,14 @@ export function AIScanner() {
               <h4 className="font-semibold text-foreground mb-2">{t('cause')}</h4>
               <p className="text-muted-foreground text-sm">{analysisResult.cause}</p>
             </div>
+
+            {/* Prevention Tips (if available) */}
+            {analysisResult.preventionTips && (
+              <div className="p-4 bg-muted rounded-xl">
+                <h4 className="font-semibold text-foreground mb-2">Prevention Tips</h4>
+                <p className="text-muted-foreground text-sm">{analysisResult.preventionTips}</p>
+              </div>
+            )}
 
             {/* Cures */}
             <div className="grid gap-4 md:grid-cols-2">
@@ -419,6 +433,17 @@ export function AIScanner() {
                 <p className="text-muted-foreground text-sm">{analysisResult.chemical}</p>
               </div>
             </div>
+
+            {/* New Scan Button */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={resetScanner}
+              className="w-full btn-forest py-4 flex items-center justify-center gap-2 touch-target"
+            >
+              <Camera className="w-5 h-5" />
+              Scan Another Plant
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>
